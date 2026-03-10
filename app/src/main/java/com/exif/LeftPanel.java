@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -29,8 +30,10 @@ public final class LeftPanel extends JPanel implements ActionListener {
 
 	private final JLabel promptLabel;
 	private final JTextField exportNameInput;
-	private final JLabel feedbackLabel;
 
+	private final JCheckBox displayImagesCheckBox;
+
+	private final JLabel feedbackLabel;
 	private final JTextArea feedbackArea;
 	private final JScrollPane feedbackScrollPane;
 
@@ -50,6 +53,9 @@ public final class LeftPanel extends JPanel implements ActionListener {
 		this.exportNameInput.setToolTipText("The name of the file the EXIF data should be exported to (Without file extension)");
 		this.exportNameInput.setText("exif");
 
+		this.displayImagesCheckBox = new JCheckBox();
+		this.displayImagesCheckBox.setText("Preview images? (On the right side)");
+
 		this.feedbackLabel = new JLabel();
 		this.feedbackLabel.setPreferredSize(new Dimension(400, 40));
 		this.feedbackLabel.setHorizontalAlignment(JLabel.CENTER);
@@ -58,7 +64,7 @@ public final class LeftPanel extends JPanel implements ActionListener {
 
 		this.feedbackArea = new JTextArea();
 		this.feedbackArea.setEditable(false);
-		this.feedbackArea.setFont(new Font(Font.MONOSPACED, Font.BOLD, 20));
+		this.feedbackArea.setFont(new Font(Font.MONOSPACED, Font.BOLD, 10));
 
 		this.feedbackScrollPane = new JScrollPane();
 		this.feedbackScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -96,6 +102,7 @@ public final class LeftPanel extends JPanel implements ActionListener {
 		this.add(this.exportNameInput);
 		this.add(this.importButton);
 		this.add(this.exportDataButton);
+		this.add(this.displayImagesCheckBox);
 		this.add(this.feedbackLabel);
 		this.add(this.feedbackScrollPane);
 	}
@@ -116,6 +123,8 @@ public final class LeftPanel extends JPanel implements ActionListener {
 	}
 
 	private void getSelectedFiles() {
+		this.feedbackLabel.setText("");
+		
 		int result = this.fileChooser.showOpenDialog(null);
 
 		if (result != JFileChooser.APPROVE_OPTION) 
@@ -126,7 +135,10 @@ public final class LeftPanel extends JPanel implements ActionListener {
 		HashMap <String, Image> images = new HashMap<>();
 
 		filtered.forEach(file -> images.put(file.getName(), new Image(file.getAbsolutePath())));
-		this.rightPanel.setImages(images);
+		this.rightPanel.setImages(images, this.displayImagesCheckBox.isSelected());
+
+		this.feedbackLabel.setForeground(Color.green);
+		this.feedbackLabel.setText("Images loaded successfully!");
 	}
 
 	private void exportData() {
@@ -191,12 +203,12 @@ public final class LeftPanel extends JPanel implements ActionListener {
 					writer.write(";");
 				}
 
-				writer.write(datum);
+				writer.write(datum == null ? "" : datum);
 				writer.write("\n");
 			}
 		}
 		catch (Exception exc) {
-			exc.printStackTrace();
+			this.feedbackArea.setText(ExceptionMessageConverter.convertExceptionToString(exc));
 		}
 
 		this.feedbackLabel.setForeground(Color.green);
