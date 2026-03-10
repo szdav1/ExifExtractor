@@ -173,8 +173,8 @@ public final class LeftPanel extends JPanel implements ActionListener {
 				String datum = image.getGPSDatum();
 
 				if (coordinates == null) {
-					System.out.println(name);
 					StringBuilder errorBuilder = new StringBuilder();
+					
 					errorBuilder.append(name)
 						.append(" NO_DATA")
 						.append("\n");
@@ -190,12 +190,13 @@ public final class LeftPanel extends JPanel implements ActionListener {
 					writer.write(String.valueOf(coordinate));
 					writer.write(";");
 				}
+
 				writer.write(datum);
 				writer.write("\n");
 			}
 		}
 		catch (Exception exc) {
-			System.err.println(exc.getMessage());
+			exc.printStackTrace();
 		}
 
 		this.feedbackLabel.setForeground(Color.green);
