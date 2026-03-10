@@ -123,7 +123,7 @@ public final class LeftPanel extends JPanel implements ActionListener {
 
 	private void getSelectedFiles() {
 		this.feedbackLabel.setText("");
-		
+
 		int result = this.fileChooser.showOpenDialog(null);
 
 		if (result != JFileChooser.APPROVE_OPTION) 
@@ -197,8 +197,13 @@ public final class LeftPanel extends JPanel implements ActionListener {
 				writer.write(name);
 				writer.write(";");
 
-				for (double coordinate : coordinates) {
-					writer.write(String.valueOf(coordinate));
+				// for (double coordinate : coordinates) {
+				// 	writer.write(String.valueOf(coordinate));
+				// 	writer.write(";");
+				// }
+
+				for (int i = coordinates.length - 1; i >= 0; i--) {
+					writer.write(String.valueOf(coordinates[i]));
 					writer.write(";");
 				}
 
