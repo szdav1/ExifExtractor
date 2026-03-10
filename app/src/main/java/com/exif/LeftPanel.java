@@ -191,6 +191,9 @@ public final class LeftPanel extends JPanel implements ActionListener {
 						.append("\n");
 
 					this.feedbackArea.setText(this.feedbackArea.getText() + errorBuilder.toString());
+
+					writer.write(name);
+					writer.write("\n");
 					continue;
 				}
 
@@ -203,6 +206,7 @@ public final class LeftPanel extends JPanel implements ActionListener {
 				// }
 
 				for (int i = coordinates.length - 1; i >= 0; i--) {
+					System.out.println(String.valueOf(coordinates[i]).length());
 					writer.write(String.valueOf(coordinates[i]));
 					writer.write(";");
 				}
@@ -211,6 +215,7 @@ public final class LeftPanel extends JPanel implements ActionListener {
 				writer.write("\n");
 			}
 		}
+
 		catch (Exception exc) {
 			this.feedbackArea.setText(ExceptionMessageConverter.convertExceptionToString(exc));
 		}
