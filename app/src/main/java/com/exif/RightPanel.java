@@ -1,21 +1,17 @@
 package com.exif;
 
-import java.awt.Dimension;
-import java.util.HashMap;
-import java.util.Map;
+import java.awt.Image;
+import java.io.File;
 
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import javaxt.io.Image;
-
 public final class RightPanel extends JPanel {
 	private boolean shouldDisplay;
 	private final Frame frame;
-	private HashMap <String, Image> images;
+	private File rootDirectory;
 
 	public RightPanel(final Frame frame) {
 		this.shouldDisplay = false;
@@ -27,26 +23,29 @@ public final class RightPanel extends JPanel {
 	private void refresh() {
 		this.removeAll();
 		this.frame.revalidate();
-		
+
 		if (!this.shouldDisplay)
 			return;
 
-		for (Map.Entry <String, Image> image : this.images.entrySet()) {
-			JLabel label = new JLabel(new ImageIcon(new ImageIcon(image.getValue().getImage()).getImage().getScaledInstance(350, 350, java.awt.Image.SCALE_SMOOTH)));
+		if (this.rootDirectory == null)
+			return;
 
+		File[] files = this.rootDirectory.listFiles();
+
+		for (File file : files) {
+			JLabel label = new JLabel();
+			label.setIcon(new ImageIcon(new ImageIcon(file.getAbsolutePath()).getImage().getScaledInstance(350, 400, Image.SCALE_FAST)));
 			this.add(label);
-			this.add(Box.createRigidArea(new Dimension(0, 10)));
 			this.frame.revalidate();
-			this.repaint();
 		}
 	}
 
-	public HashMap <String, Image> getImages() {
-		return this.images;
+	public File getRootDirectory() {
+		return this.rootDirectory;
 	}
 
-	public void setImages(HashMap <String, Image> images, boolean shouldDisplay) {
-		this.images = images;
+	public void setRootDirectory(File rootDirectory, boolean shouldDisplay) {
+		this.rootDirectory = rootDirectory;
 		this.shouldDisplay = shouldDisplay;
 		this.refresh();
 	}

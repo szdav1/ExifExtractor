@@ -18,10 +18,12 @@ import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
+import javaxt.io.Directory;
 import javaxt.io.Image;
 
 public final class LeftPanel extends JPanel implements ActionListener {
@@ -31,6 +33,7 @@ public final class LeftPanel extends JPanel implements ActionListener {
 	private final JTextField exportNameInput;
 
 	private final JCheckBox displayImagesCheckBox;
+	private final JProgressBar progressBar;
 
 	private final JLabel feedbackLabel;
 	private final JTextArea feedbackArea;
@@ -54,6 +57,9 @@ public final class LeftPanel extends JPanel implements ActionListener {
 
 		this.displayImagesCheckBox = new JCheckBox();
 		this.displayImagesCheckBox.setText("Preview images? (On the right side)");
+
+		this.progressBar = new JProgressBar(0, 100);
+		this.progressBar.setPreferredSize(new Dimension(350, 20));
 
 		this.feedbackLabel = new JLabel();
 		this.feedbackLabel.setPreferredSize(new Dimension(400, 40));
@@ -87,13 +93,16 @@ public final class LeftPanel extends JPanel implements ActionListener {
 		this.exportDataButton.addActionListener(this);
 
 		this.fileChooser = new JFileChooser();
-		this.fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-		this.fileChooser.setMultiSelectionEnabled(true);
+		this.fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		this.fileChooser.setAcceptAllFileFilterUsed(false);
+		this.fileChooser.setMultiSelectionEnabled(false);
+		this.fileChooser.setDialogTitle("Select directory...");
 
 		this.fileSaver = new JFileChooser();
 		this.fileSaver.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		this.fileSaver.setAcceptAllFileFilterUsed(false);
 		this.fileSaver.setMultiSelectionEnabled(false);
+		this.fileSaver.setDialogTitle("Select directory...");
 
 		this.setPreferredSize(new Dimension(400, 600));
 		this.setLayout(new FlowLayout());
@@ -102,132 +111,125 @@ public final class LeftPanel extends JPanel implements ActionListener {
 		this.add(this.importButton);
 		this.add(this.exportDataButton);
 		this.add(this.displayImagesCheckBox);
+		this.add(this.progressBar);
 		this.add(this.feedbackLabel);
 		this.add(this.feedbackScrollPane);
 	}
 	
 
-	private List <File> filterFiles(final File[] files) {
-		return Arrays.asList(files)
-			.stream()
-			.filter(file ->  {
-				return file.getName().endsWith(".png") || 
-					file.getName().endsWith(".jpg") || 
-					file.getName().endsWith(".jpeg") || 
-					file.getName().endsWith(".heic") || 
-					file.getName().endsWith(".tiff");
-				}
-			)
-			.toList();
+	private boolean filterFile(final File file) {
+		return file.getName().endsWith(".png") || 
+			file.getName().endsWith(".jpg") || 
+			file.getName().endsWith(".jpeg") || 
+			file.getName().endsWith(".heic") || 
+			file.getName().endsWith(".tiff");
+
 	}
 
-	private void getSelectedFiles() {
-		this.feedbackLabel.setText("");
+	private void getInputDirectory() {
+		this.feedbackLabel.setForeground(Color.green);
+		this.feedbackLabel.setText("Importing...");
 
 		int result = this.fileChooser.showOpenDialog(null);
 
-		if (result != JFileChooser.APPROVE_OPTION) 
+		if (result != JFileChooser.APPROVE_OPTION) {
+			this.feedbackLabel.setText("");
 			return;
+		}
 
-		File[] selectedFiles = this.fileChooser.getSelectedFiles();
-		List <File> filtered = this.filterFiles(selectedFiles);
-		HashMap <String, Image> images = new HashMap<>();
+		File directory = this.fileChooser.getSelectedFile();
 
-		filtered.forEach(file -> images.put(file.getName(), new Image(file.getAbsolutePath())));
-		this.rightPanel.setImages(images, this.displayImagesCheckBox.isSelected());
+		if (directory == null) {
+			this.feedbackLabel.setForeground(Color.red);
+			this.feedbackLabel.setText("Invalid directory!");
+			return;
+		}
+
+		this.rightPanel.setRootDirectory(directory, this.displayImagesCheckBox.isSelected());
 
 		this.feedbackLabel.setForeground(Color.green);
 		this.feedbackLabel.setText("Images loaded successfully!");
 	}
 
-	private void exportData() {
-		String targetFileName = this.exportNameInput.getText();
-
-		if (targetFileName.isBlank()) {
-			this.feedbackLabel.setForeground(Color.red);
-			this.feedbackLabel.setText("Please specify target filename!");
-			return;
-		}
-
-		if (this.rightPanel.getImages() == null || this.rightPanel.getImages().size() <= 0) {
-			this.feedbackLabel.setForeground(Color.red);
-			this.feedbackLabel.setText("Select images for EXIF extraction!");
-			return;
-		}
-
+	private File getOutputDirectory() {
 		int result = this.fileSaver.showSaveDialog(null);
 
 		if (result != JFileChooser.APPROVE_OPTION)
-			return;
+			return null;
 
-		File selectedDirectory = this.fileSaver.getSelectedFile();
+		return this.fileSaver.getSelectedFile();
+	}
 
-		if (selectedDirectory == null) {
+	private void exportData() {
+		if (this.rightPanel.getRootDirectory() == null) {
 			this.feedbackLabel.setForeground(Color.red);
-			this.feedbackLabel.setText("Select images for EXIF extraction!");
+			this.feedbackLabel.setText("No input directory!");
 			return;
 		}
-		
+
+		this.feedbackLabel.setForeground(Color.green);
+		this.feedbackLabel.setText("Exporting...");
+
+		File outputDirectory = this.getOutputDirectory();
+		String outputFileName = this.exportNameInput.getText();
+
+		if (outputDirectory == null || outputFileName == null || outputFileName.isBlank()) {
+			this.feedbackLabel.setForeground(Color.red);
+			this.feedbackLabel.setText("No output file or directory!");
+			return;
+		}
+
 		StringBuilder stringBuilder = new StringBuilder();
 
-		stringBuilder.append(selectedDirectory.getAbsolutePath())
+		stringBuilder.append(outputDirectory.getAbsolutePath())
 			.append("\\")
-			.append(targetFileName)
+			.append(outputFileName)
 			.append(".csv");
 
 		try (FileWriter writer = new FileWriter(new File(stringBuilder.toString()))) {
-			for (Map.Entry <String, Image> entry : this.rightPanel.getImages().entrySet()) {
-				Image image = entry.getValue();
-				String name = entry.getKey();
+			File[] inputFiles = this.rightPanel.getRootDirectory().listFiles();
+			Image image;
 
+			for (File inputFile : inputFiles) {
+				if (!this.filterFile(inputFile))
+					continue;
+
+				image = new Image(inputFile.getAbsolutePath());
 				double[] coordinates = image.getGPSCoordinate();
-				String datum = image.getGPSDatum();
+				String date = image.getGPSDatum();
+
+				writer.write(inputFile.getName());
+				writer.write(";");
 
 				if (coordinates == null) {
-					StringBuilder errorBuilder = new StringBuilder();
-					
-					errorBuilder.append(name)
-						.append(" NO_DATA")
-						.append("\n");
-
-					this.feedbackArea.setText(this.feedbackArea.getText() + errorBuilder.toString());
-
-					writer.write(name);
+					this.feedbackArea.setText(feedbackArea.getText() + inputFile.getName() + " NO_DATA\n");
+					writer.write(";;");
+					writer.write(date == null ? "" : date);
 					writer.write("\n");
 					continue;
 				}
 
-				writer.write(name);
-				writer.write(";");
-
-				// for (double coordinate : coordinates) {
-				// 	writer.write(String.valueOf(coordinate));
-				// 	writer.write(";");
-				// }
-
 				for (int i = coordinates.length - 1; i >= 0; i--) {
-					System.out.println(String.valueOf(coordinates[i]).length());
 					writer.write(String.valueOf(coordinates[i]));
 					writer.write(";");
 				}
 
-				writer.write(datum == null ? "" : datum);
+				writer.write(date == null ? "" : date);
 				writer.write("\n");
 			}
-		}
 
-		catch (Exception exc) {
-			this.feedbackArea.setText(ExceptionMessageConverter.convertExceptionToString(exc));
+			this.feedbackLabel.setForeground(Color.green);
+			this.feedbackLabel.setText("EXIF export succesfull!");
 		}
-
-		this.feedbackLabel.setForeground(Color.green);
-		this.feedbackLabel.setText("EXIF export successfull!");
+		catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource().equals(this.importButton))
-			getSelectedFiles();
+			getInputDirectory();
 
 		else if (e.getSource().equals(this.exportDataButton))
 			this.exportData();
